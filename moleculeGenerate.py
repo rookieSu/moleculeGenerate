@@ -7,7 +7,7 @@ bondNumber = 0
 coordinates = []
 replace = {}
 
-def read_file(filename):
+def read_molfile(filename):
     global atomNumber, bondNumber, atomDict, bondAdj, coordinates
     with open(filename,'r') as f:
         lines = f.readlines()
@@ -19,12 +19,8 @@ def read_file(filename):
            bondAdj.append([0 for x in range(0, atomNumber)])
         for i in range(atomNumber+4,len(lines)-1):
             row, column = eval(lines[i].split()[0])-1, eval(lines[i].split()[1])-1
-            if eval(lines[i].split()[2]) == 2:
-                bondAdj[row][column] = 2 
-                bondAdj[column][row] = 2
-            else: 
-                bondAdj[row][column] = 1
-                bondAdj[column][row] = 1  
+            bondValue = eval(lines[i].split()[2])
+            bondAdj[row][column], bondAdj[column][row] = bondValue, bondValue
     f.close()
 
 def is_replace():
@@ -59,7 +55,7 @@ def is_replace():
             replace[index] = 0
                 
 if __name__ == "__main__":
-    read_file('ben.mol')
+    read_molfile('ben.mol')
     is_replace()
     print(replace)
 

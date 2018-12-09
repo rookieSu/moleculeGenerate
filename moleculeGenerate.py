@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/home/su/opt/anaconda3/bin/python
 import os
 import copy
 atomDict = {}
@@ -108,7 +108,25 @@ def replace(subSmiles):
             molFile.close()
         f.close()
 
+def inchi_filter():
+    root = os.getcwd()
+    filenames = os.walk(root).__next__()[2]
+    currentInchi = ""
+    inchiList = []
+    for index, name in enumerate(filenames):
+        if name.split(".")[1] == "mol":
+            currentInchi = os.popen("obabel -i mol {} -o inchi".format(name))
+            if index != 0:
+                if currentInchi in inchiList:
+                    os.system("rm {}".format(name))
+                else:
+                    inchiList.append(currentInchi)
+            else:
+                inchiList.append(currentInchi)
+    print(inchiList)
+
 if __name__ == "__main__":
     read_molfile('ben.mol')
     is_replace()
     read_sub('sub.txt')
+    inchi_filter()

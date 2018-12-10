@@ -1,4 +1,4 @@
-#!/home/su/opt/anaconda3/bin/python
+#!/usr/bin/python
 import os
 import copy
 atomDict = {}
@@ -53,6 +53,7 @@ def is_replace():
             else:rePosition[index] = 0
         else:
             rePosition[index] = 0
+    print('max relpace number is: {}'.format(sum(rePosition.values())))
 
 def read_sub(subname):
     subSmiles = []
@@ -61,7 +62,6 @@ def read_sub(subname):
         for index, item in enumerate(lines):
             subSmiles.append('I'+item.strip())
     f.close()
-    print(subSmiles)
     replace(subSmiles)
 
 def replace(subSmiles):
@@ -75,7 +75,7 @@ def replace(subSmiles):
             lines = f.readlines()
             subAtom, subBond = eval(lines[3].split()[0]), eval(lines[3].split()[1])
             subAtomInfo, subBondInfo = lines[5:4+subAtom], lines[4+subAtom:4+subAtom+subBond]
-            with open('ben.mol', 'r') as molFile:
+            with open('p73.mol', 'r') as molFile:
                 molLines = molFile.readlines()
                 for key, value in zip(rePosition.keys(), rePosition.values()):
                     lines = copy.deepcopy(molLines)
@@ -95,7 +95,7 @@ def replace(subSmiles):
                                 item = item.split()
                                 item[0] = str(atomNumber+eval(item[0])-1)
                                 item[1] = str(atomNumber+eval(item[1])-1)
-                            results.append("  "+"  ".join(item)+"\n")
+                            results.append(" "+" ".join(item)+"\n")
                         changeAtomBond = lines[3].split()
                         changeAtomBond[0], changeAtomBond[1] = str(atomNumber+subAtom-1), str(bondNumber+subBond)
                         lines[3]="  ".join(changeAtomBond)+"\n"
@@ -115,18 +115,36 @@ def inchi_filter():
     inchiList = []
     for index, name in enumerate(filenames):
         if name.split(".")[1] == "mol":
-            currentInchi = os.popen("obabel -i mol {} -o inchi".format(name))
+            currentInchi = os.popen("obabel -i mol {} -o inchi".format(name)).read()
             if index != 0:
                 if currentInchi in inchiList:
                     os.system("rm {}".format(name))
+                    print("rm {} !!!".format(name))
                 else:
                     inchiList.append(currentInchi)
             else:
                 inchiList.append(currentInchi)
-    print(inchiList)
+
+def smiles_filter():
+    root = os.getcwd()
+    filenames = os.walk(root).__next__()[2]
+    currentSmiles = ""
+    smilesList = []
+    for index, name in enumerate(filenames):
+        if name.split(".")[1] == "mol":
+            currentSmiles = os.popen("obabel -i mol {} -o smi".format(name)).read()
+            if index != 0:
+                if currentSmiles in smilesList:
+                    os.system("rm {}".format(name))
+                    print("rm {}!!!".format(name))
+                else:
+                    smilesList.append(currentSmiles)
+            else:
+                smilesList.append(currentSmiles)
 
 if __name__ == "__main__":
-    read_molfile('ben.mol')
+    read_molfile('p73.mol')
     is_replace()
     read_sub('sub.txt')
     inchi_filter()
+    smiles_filter()

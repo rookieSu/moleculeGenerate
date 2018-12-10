@@ -67,6 +67,10 @@ def read_sub(subname):
 def replace(subSmiles):
     reFileName = []
     count = 1
+    if os.path.exists('mol'):
+        os.system("rm mol/*")
+    else:
+        os.system("mkdir mol")
     for index, item in enumerate(subSmiles):
         os.system("obabel -:\"{}\" -O {}.mol --gen3D".format(item,index))
         reFileName.append("{}.mol".format(index))
@@ -75,7 +79,7 @@ def replace(subSmiles):
             lines = f.readlines()
             subAtom, subBond = eval(lines[3].split()[0]), eval(lines[3].split()[1])
             subAtomInfo, subBondInfo = lines[5:4+subAtom], lines[4+subAtom:4+subAtom+subBond]
-            with open('p73.mol', 'r') as molFile:
+            with open('p35n.mol', 'r') as molFile:
                 molLines = molFile.readlines()
                 for key, value in zip(rePosition.keys(), rePosition.values()):
                     lines = copy.deepcopy(molLines)
@@ -104,11 +108,13 @@ def replace(subSmiles):
                             conf.write("".join(lines))
                         conf.close()
                         os.system("obabel conf{}.mol -O conf{}.mol --gen3D".format(count,count))
+                        os.system("mv conf{}.mol mol".format(count))
                         count+=1
             molFile.close()
         f.close()
 
 def inchi_filter():
+    os.chdir(os.getcwd()+'/mol')
     root = os.getcwd()
     filenames = os.walk(root).__next__()[2]
     currentInchi = ""
@@ -143,7 +149,7 @@ def smiles_filter():
                 smilesList.append(currentSmiles)
 
 if __name__ == "__main__":
-    read_molfile('p73.mol')
+    read_molfile('p35n.mol')
     is_replace()
     read_sub('sub.txt')
     inchi_filter()

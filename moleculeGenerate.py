@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/home/su/opt/anaconda3/bin/python
 import os
 import copy
 atomDict = {}
@@ -64,22 +64,25 @@ def read_sub(subname):
     f.close()
     replace(subSmiles)
 
-def replace(subSmiles):
-    reFileName = []
-    count = 1
+def is_exit_path():
     if os.path.exists('mol'):
         os.system("rm mol/*")
     else:
         os.system("mkdir mol")
+
+def replace(subSmiles):
+    subFile = []
+    count = 1
     for index, item in enumerate(subSmiles):
         os.system("obabel -:\"{}\" -O {}.mol --gen3D".format(item,index))
-        reFileName.append("{}.mol".format(index))
-    for name in reFileName:
+        subFile.append("{}.mol".format(index))
+    
+    for name in subFile:
         with open(name, 'r') as f:
             lines = f.readlines()
             subAtom, subBond = eval(lines[3].split()[0]), eval(lines[3].split()[1])
             subAtomInfo, subBondInfo = lines[5:4+subAtom], lines[4+subAtom:4+subAtom+subBond]
-            with open('p35n.mol', 'r') as molFile:
+            with open('p73.mol', 'r') as molFile:
                 molLines = molFile.readlines()
                 for key, value in zip(rePosition.keys(), rePosition.values()):
                     lines = copy.deepcopy(molLines)
@@ -87,6 +90,7 @@ def replace(subSmiles):
                         lines[4+atomNumber:4+atomNumber] = subAtomInfo
                         results = []
                         for index, item in enumerate(subBondInfo):
+                            spaceNumber = ""
                             if index == 0:
                                 item = item.split()
                                 if eval(item[0]) > eval(item[1]):
@@ -99,10 +103,11 @@ def replace(subSmiles):
                                 item = item.split()
                                 item[0] = str(atomNumber+eval(item[0])-1)
                                 item[1] = str(atomNumber+eval(item[1])-1)
-                            results.append(" "+" ".join(item)+"\n")
+                            item = fill_space(item)
+                            results.append(item)
                         changeAtomBond = lines[3].split()
                         changeAtomBond[0], changeAtomBond[1] = str(atomNumber+subAtom-1), str(bondNumber+subBond)
-                        lines[3]="  ".join(changeAtomBond)+"\n"
+                        lines[3]=fill_space(changeAtomBond)
                         lines[-1:-1] = results
                         with open('conf{}.mol'.format(count),'w') as conf:
                             conf.write("".join(lines))
@@ -112,6 +117,15 @@ def replace(subSmiles):
                         count+=1
             molFile.close()
         f.close()
+
+def fill_space(l):
+    space = ""
+    for each in l:
+        if len(each) == 1:
+            space += "  "+each
+        else:
+            space += " "+each
+    return space+'\n'
 
 def inchi_filter():
     os.chdir(os.getcwd()+'/mol')
@@ -149,7 +163,7 @@ def smiles_filter():
                 smilesList.append(currentSmiles)
 
 if __name__ == "__main__":
-    read_molfile('p35n.mol')
+    read_molfile('p73.mol')
     is_replace()
     read_sub('sub.txt')
     inchi_filter()

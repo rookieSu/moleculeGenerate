@@ -3,12 +3,16 @@ import os
 import copy
 atomDict = {}
 bondAdj = []
-atomNumber = 0
-bondNumber = 0
+atomNumber, bondNumber = 0, 0
+subSmiles = []
 coordinates = []
 rePosition = {}
+skeletonNames = []
 def read_molfile(molname):
     global atomNumber, bondNumber, atomDict, bondAdj, coordinates
+    atomDict.clear()
+    coordinates.clear()
+    bondAdj.clear()
     with open(molname,'r') as f:
         lines = f.readlines()
         atomNumber, bondNumber = eval(lines[3].split()[0]), eval(lines[3].split()[1])
@@ -22,9 +26,11 @@ def read_molfile(molname):
             bondValue = eval(lines[i].split()[2])
             bondAdj[row][column], bondAdj[column][row] = bondValue, bondValue
     f.close()
+    is_replace()
 
 def is_replace():
-    global rePosition, bondAdj
+    global rePosition , bondAdj 
+    rePosition.clear() 
     bondCounter = [sum(bond) for bond in bondAdj]
     for (count, index) in zip(bondCounter,range(1, atomNumber+1)):
         if count == 5:
@@ -56,67 +62,73 @@ def is_replace():
     print('max relpace number is: {}'.format(sum(rePosition.values())))
 
 def read_sub(subname):
-    subSmiles = []
+    global subSmiles 
     with open(subname,'r') as f:
         lines = f.readlines()
         for index, item in enumerate(lines):
             subSmiles.append('I'+item.strip())
     f.close()
-    replace(subSmiles)
 
-def is_exit_path():
+def is_exist_path():
     if os.path.exists('mol'):
         os.system("rm mol/*")
     else:
         os.system("mkdir mol")
 
-def replace(subSmiles):
+def replace(sub, skeleton, maxAssemble):
+    global subSmiles, skeletonNames
     subFile = []
     count = 1
+    skeletonNames.append(skeleton)
+    read_sub(sub)
     for index, item in enumerate(subSmiles):
         os.system("obabel -:\"{}\" -O {}.mol --gen3D".format(item,index))
         subFile.append("{}.mol".format(index))
-    
-    for name in subFile:
-        with open(name, 'r') as f:
-            lines = f.readlines()
-            subAtom, subBond = eval(lines[3].split()[0]), eval(lines[3].split()[1])
-            subAtomInfo, subBondInfo = lines[5:4+subAtom], lines[4+subAtom:4+subAtom+subBond]
-            with open('p73.mol', 'r') as molFile:
-                molLines = molFile.readlines()
-                for key, value in zip(rePosition.keys(), rePosition.values()):
-                    lines = copy.deepcopy(molLines)
-                    if value > 0:
-                        lines[4+atomNumber:4+atomNumber] = subAtomInfo
-                        results = []
-                        for index, item in enumerate(subBondInfo):
-                            spaceNumber = ""
-                            if index == 0:
-                                item = item.split()
-                                if eval(item[0]) > eval(item[1]):
-                                    item[0] = str(eval(item[0])-1)
-                                    item[1] = str(key)
-                                else:
-                                    item[0] = str(key)
-                                    item[1] = str(atomNumber+eval(item[1])-1)
-                            else:
-                                item = item.split()
-                                item[0] = str(atomNumber+eval(item[0])-1)
-                                item[1] = str(atomNumber+eval(item[1])-1)
-                            item = fill_space(item)
-                            results.append(item)
-                        changeAtomBond = lines[3].split()
-                        changeAtomBond[0], changeAtomBond[1] = str(atomNumber+subAtom-1), str(bondNumber+subBond)
-                        lines[3]=fill_space(changeAtomBond)
-                        lines[-1:-1] = results
-                        with open('conf{}.mol'.format(count),'w') as conf:
-                            conf.write("".join(lines))
-                        conf.close()
-                        os.system("obabel conf{}.mol -O conf{}.mol --gen3D".format(count,count))
-                        os.system("mv conf{}.mol mol".format(count))
-                        count+=1
-            molFile.close()
-        f.close()
+    for steep in range(0, maxAssemble):
+        for sub in subFile:
+            with open(sub, 'r') as f:
+                lines = f.readlines()
+                subAtom, subBond = eval(lines[3].split()[0]), eval(lines[3].split()[1])
+                subAtomInfo, subBondInfo = lines[5:4+subAtom], lines[4+subAtom:4+subAtom+subBond]
+                for skeleton in skeletonNames:
+                    print("name: ",skeleton)
+                    read_molfile(skeleton)
+                    with open(skeleton, 'r') as molFile:
+                        molLines = molFile.readlines()
+                        for key, value in zip(rePosition.keys(), rePosition.values()):
+                            lines = copy.deepcopy(molLines)
+                            if value > 0:
+                                lines[4+atomNumber:4+atomNumber] = subAtomInfo
+                                results = []
+                                for index, item in enumerate(subBondInfo):
+                                    if index == 0:
+                                        item = item.split()
+                                        if eval(item[0]) > eval(item[1]):
+                                            item[0] = str(eval(item[0])-1)
+                                            item[1] = str(key)
+                                        else:
+                                            item[0] = str(key)
+                                            item[1] = str(atomNumber+eval(item[1])-1)
+                                    else:
+                                        item = item.split()
+                                        item[0] = str(atomNumber+eval(item[0])-1)
+                                        item[1] = str(atomNumber+eval(item[1])-1)
+                                    item = fill_space(item)
+                                    results.append(item)
+                                changeAtomBond = lines[3].split()
+                                changeAtomBond[0], changeAtomBond[1] = str(atomNumber+subAtom-1), str(bondNumber+subBond)
+                                lines[3]=fill_space(changeAtomBond)
+                                lines[-1:-1] = results
+                                with open('conf{}.mol'.format(count),'w') as conf:
+                                    conf.write("".join(lines))
+                                conf.close()
+                                os.system("obabel conf{}.mol -O conf{}.mol -d --gen3D".format(count,count))
+                               # os.system("mv conf{}.mol mol".format(count))
+                                count+=1
+                    molFile.close()
+            f.close()
+        inchi_filter()
+        smiles_filter()
 
 def fill_space(l):
     space = ""
@@ -128,7 +140,7 @@ def fill_space(l):
     return space+'\n'
 
 def inchi_filter():
-    os.chdir(os.getcwd()+'/mol')
+    #os.chdir(os.getcwd()+'/mol')
     root = os.getcwd()
     filenames = os.walk(root).__next__()[2]
     currentInchi = ""
@@ -146,6 +158,7 @@ def inchi_filter():
                 inchiList.append(currentInchi)
 
 def smiles_filter():
+    global skeletonNames
     root = os.getcwd()
     filenames = os.walk(root).__next__()[2]
     currentSmiles = ""
@@ -161,10 +174,11 @@ def smiles_filter():
                     smilesList.append(currentSmiles)
             else:
                 smilesList.append(currentSmiles)
-
+    skeletonNames = list(filter(None, os.popen("ls conf*").read().split("\n")))
+    print(skeletonNames)
+    
 if __name__ == "__main__":
-    read_molfile('p73.mol')
-    is_replace()
-    read_sub('sub.txt')
-    inchi_filter()
-    smiles_filter()
+    skeleton = input("Please input skeleton mol file:")
+    subFile = input("Please input assemble file:")
+    maxAssemble = eval(input("Please input max assemble"))
+    replace(subFile, skeleton, maxAssemble)
